@@ -43,6 +43,7 @@ interface ImageData {
   tokenId?: string;
   mintedAt?: string;
   ipId?: string;
+  licenseTermsIds?: string[];
 }
 
 interface DashboardProps {
@@ -244,12 +245,19 @@ const Dashboard: React.FC<DashboardProps> = ({ walletAddress }) => {
         .map((img) => img.ipId)
         .filter((ipId): ipId is string => ipId !== undefined);
 
+      const selectedLicenseTermsIds = images
+        .filter((img) => selectedCids.includes(img.cid))
+        .map((img) => img.licenseTermsIds)
+        .filter((ids): ids is string[] => ids !== undefined)
+        .flat();
+
       await axios.post(`${API_BASE_URL}/api/fine-tune-dataset`, {
         walletAddress,
         modelName: data.modelName,
         description: data.description,
         selectedCids,
         selectedIpIds,
+        selectedLicenseTermsIds,
       });
 
       setNotification({

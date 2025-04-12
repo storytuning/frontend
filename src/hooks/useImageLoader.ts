@@ -12,6 +12,7 @@ export interface ImageData {
   tokenId?: string;
   mintedAt?: string;
   ipId?: string;
+  licenseTermsIds?: string[];
 }
 
 export const useImageLoader = (walletAddress: string | null) => {

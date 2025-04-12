@@ -8,6 +8,7 @@ interface ModelData {
   status: string;
   selectedCids: string[];
   selectedIpIds: string[];
+  selectedLicenseTermsIds: string[];
   createdAt: string;
   updatedAt: string;
   modelCid?: string;
