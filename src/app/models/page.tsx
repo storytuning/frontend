@@ -416,6 +416,11 @@ export default function ModelsPage() {
         >
           AI Models
         </Typography>
+        {!walletAddress && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            지갑을 연결하여 모델을 생성하고 사용하세요.
+          </Alert>
+        )}
       </Box>
 
       <Paper sx={{ borderRadius: 3, overflow: "hidden" }}>
