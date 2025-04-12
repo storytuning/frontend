@@ -14,6 +14,8 @@ interface ModelData {
   modelCid?: string;
   error?: string;
   modelIpfsHash?: string;
+  ipId?: string;
+  licenseTermsId?: string;
 }
 
 interface ApiResponse {

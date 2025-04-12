@@ -19,6 +19,10 @@ import {
   Snackbar,
   Alert,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@mui/material";
 import { useAccount } from "wagmi";
 import { useModelLoader, useAllModelsLoader } from "../../hooks/useModelLoader";
@@ -35,6 +39,9 @@ export default function ModelsPage() {
   const [licenseStatusMap, setLicenseStatusMap] = useState<
     Record<string, boolean>
   >({});
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingBuyModel, setPendingBuyModel] = useState<any>(null);
+  const [rerender, setRerender] = useState(false);
 
   const { client } = useStoryClient();
   const { address: walletAddress } = useAccount();
@@ -54,6 +61,7 @@ export default function ModelsPage() {
     models: myModels,
     loading: myLoading,
     error: myError,
+    refetchModels,
   } = useModelLoader(walletAddress ?? null);
   const {
     models: allModels,
@@ -77,7 +85,7 @@ export default function ModelsPage() {
     };
 
     fetchTokenStatuses();
-  }, [walletAddress, allModels]);
+  }, [walletAddress, allModels, rerender]);
 
   const modelUsageLicenseTerms: LicenseTerms = {
     transferable: true,
@@ -110,15 +118,8 @@ export default function ModelsPage() {
     try {
       const metadataURI = `ipfs://${model.Cid}`;
 
-      const response = await client.ipAsset.mintAndRegisterIpAndMakeDerivative({
+      const response = await client.ipAsset.mintAndRegisterIp({
         spgNftContract: "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc",
-        derivData: {
-          parentIpIds: model.selectedIpIds,
-          licenseTermsIds: model.selectedLicenseTermsIds,
-          maxMintingFee: BigInt(0),
-          maxRevenueShare: 0,
-          maxRts: 0,
-        },
         ipMetadata: {
           ipMetadataURI: metadataURI,
           ipMetadataHash: keccak256(
@@ -129,7 +130,6 @@ export default function ModelsPage() {
             new TextEncoder().encode(`nft-${model.Cid}`)
           ),
         },
-        recipient: walletAddress,
         txOptions: {
           waitForTransaction: true,
           confirmations: 1,
@@ -137,11 +137,24 @@ export default function ModelsPage() {
       });
 
       try {
-        await client.ipAsset.registerPilTermsAndAttach({
+        const response1 = await client.ipAsset.registerPilTermsAndAttach({
           ipId: response.ipId,
           licenseTermsData: [{ terms: modelUsageLicenseTerms }],
           txOptions: { waitForTransaction: true },
         });
+        try {
+          await axios.post("http://localhost:3001/api/update-model-info", {
+            walletAddress,
+            modelName: model.modelName,
+            ipId: response.ipId,
+            licenseTermsId: response1.licenseTermsIds?.map((id) =>
+              id.toString()
+            ),
+          });
+          await refetchModels();
+        } catch (error) {
+          console.error("response1 post error:", error);
+        }
       } catch (error) {
         console.error("attach 에러 : ", error);
       }
@@ -151,6 +164,8 @@ export default function ModelsPage() {
         message: `model successfully registered. IP ID: ${response.ipId}`,
         severity: "success",
       });
+
+      setRerender((prev) => !prev);
     } catch (error) {
       setNotification({
         open: true,
@@ -308,57 +323,114 @@ export default function ModelsPage() {
           )}
         </CardContent>
         <CardActions>
-          <Button
-            fullWidth
-            size="small"
-            variant="contained"
-            disabled={model.status !== "completed"}
-            onClick={() => {
-              if (model.status !== "completed") return;
+          {model.status !== "completed" ? (
+            <Button
+              fullWidth
+              size="small"
+              variant="contained"
+              disabled={model.status !== "completed"}
+            >
+              Training...
+            </Button>
+          ) : walletAddress === model.walletAddress || hasToken ? (
+            (model.ipId || walletAddress === model.walletAddress) && (
+              <Button
+                fullWidth
+                size="small"
+                variant="contained"
+                onClick={() =>
+                  handleOpenGenerationModal(
+                    model.modelName,
+                    model.walletAddress
+                  )
+                }
+                sx={{
+                  background: "linear-gradient(135deg, #ff4081, #7b61ff)",
+                }}
+              >
+                Use Model
+              </Button>
+            )
+          ) : (
+            model.ipId && (
+              <Button
+                fullWidth
+                size="small"
+                variant="contained"
+                onClick={() => {
+                  setPendingBuyModel(model); // 구매 모달 열기용
+                  setConfirmOpen(true);
+                }}
+                sx={{
+                  background: "linear-gradient(135deg, #f65c90df, #ee5e8e)",
+                }}
+              >
+                Buy Model
+              </Button>
+            )
+          )}
 
-              if (hasToken) {
-                //hasLicenseToken
-                handleOpenGenerationModal(model.modelName, model.walletAddress);
-              } else {
-                handleBuyModelLicense({
-                  modelIpId: model.ipId,
-                  licenseTermsId: model.licenseTermsId,
-                  userWalletAddress: walletAddress as Address,
-                });
-              }
-            }}
-            sx={{
-              background:
-                model.status === "completed"
-                  ? "linear-gradient(135deg, #ff4081, #7b61ff)"
-                  : undefined,
-            }}
-          >
-            {model.status !== "completed"
-              ? "Training..."
-              : hasToken
-              ? "Use Model"
-              : "Buy Model"}
-          </Button>
-
-          <Button
-            fullWidth
-            size="small"
-            variant="contained"
-            disabled={model.status !== "completed"}
-            onClick={() =>
-              model.status === "completed" && RegisterModelIP(model)
-            }
-            sx={{
-              background:
-                model.status === "completed"
-                  ? "linear-gradient(135deg, #7b61ff, #ff4081)"
-                  : undefined,
-            }}
-          >
-            Register IP
-          </Button>
+          {!model.ipId &&
+            walletAddress === model.walletAddress &&
+            model.status === "completed" && (
+              <Button
+                fullWidth
+                size="small"
+                variant="contained"
+                disabled={model.status !== "completed"}
+                onClick={() =>
+                  model.status === "completed" && RegisterModelIP(model)
+                }
+                sx={{
+                  background:
+                    model.status === "completed"
+                      ? "linear-gradient(135deg, #7b61ff, #ff4081)"
+                      : undefined,
+                }}
+              >
+                Register IP
+              </Button>
+            )}
         </CardActions>
+        <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+          <DialogTitle>Buy Model</DialogTitle>
+          <DialogContent>
+            <Typography>
+              Do you want to purchase the license for model{" "}
+              <strong>{pendingBuyModel?.modelName}</strong>?
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+            <Button
+              variant="contained"
+              onClick={async () => {
+                try {
+                  await handleBuyModelLicense({
+                    modelIpId: pendingBuyModel.ipId,
+                    licenseTermsId: pendingBuyModel.licenseTermsId,
+                    userWalletAddress: walletAddress!,
+                  });
+                  setConfirmOpen(false);
+                  setNotification({
+                    open: true,
+                    message: "License purchased successfully!",
+                    severity: "success",
+                  });
+                  setRerender((prev) => !prev);
+                } catch (error) {
+                  setNotification({
+                    open: true,
+                    message: "License purchase failed.",
+                    severity: "error",
+                  });
+                }
+              }}
+            >
+              Confirm Purchase
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Card>
     );
   };
@@ -401,6 +473,11 @@ export default function ModelsPage() {
       console.error("지갑 연결이 필요합니다.");
       return;
     }
+    console.log("라이선스 민팅 시도:", {
+      modelIpId,
+      licenseTermsId,
+      userWalletAddress,
+    });
 
     try {
       const response = await client.license.mintLicenseTokens({
@@ -425,6 +502,7 @@ export default function ModelsPage() {
         console.error("구매토큰 post 실패 :", error);
         throw error;
       }
+      setRerender((prev) => !prev);
     } catch (error) {
       console.error("라이선스 민팅 실패:", error);
       throw error;
