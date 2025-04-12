@@ -19,10 +19,7 @@ import {
 import { readContract, writeContract } from "@wagmi/core";
 import { wagmiConfig } from "@/config/wagmiConfig";
 
-import {
-  NFT_CONTRACT_ABI,
-  NFT_CONTRACT_ADDRESS,
-} from "../utils/contractConfig";
+import { NFT_CONTRACT_, NFT_CONTRACT_ADDRESS } from "../utils/contractConfig";
 
 interface WalletManagerProps {
   onWalletConnected: (address: string) => void;

@@ -171,38 +171,6 @@ export default function ModelsPage() {
     setGenerationModalOpen(true);
   };
 
-  const handleGenerateImage = async (data: {
-    prompt: string;
-    numOfImages: number;
-  }) => {
-    if (!selectedModel || !walletAddress)
-      throw new Error("모델 정보가 올바르지 않습니다");
-
-    try {
-      const images = await generateImage({
-        modelName: selectedModel.name,
-        modelOwnerAddress: selectedModel.owner,
-        walletAddress,
-        prompt: data.prompt,
-        numOfImages: data.numOfImages,
-      });
-
-      setNotification({
-        open: true,
-        message: "Images generated successfully!",
-        severity: "success",
-      });
-      return images;
-    } catch (err) {
-      setNotification({
-        open: true,
-        message: err instanceof Error ? err.message : "이미지 생성 실패",
-        severity: "error",
-      });
-      throw err;
-    }
-  };
-
   const handleGenerateSuccess = (images: any[]) => {
     setNotification({
       open: true,
@@ -377,6 +345,43 @@ export default function ModelsPage() {
       ))}
     </Grid>
   );
+
+  const useModel = async ({
+    modelIpId,
+    licenseTermsId,
+    userWalletAddress,
+  }: {
+    modelIpId: string;
+    licenseTermsId: string | number | bigint;
+    userWalletAddress: string;
+  }) => {
+    if (!client || !userWalletAddress) {
+      console.error("지갑 연결이 필요합니다.");
+      return;
+    }
+
+    try {
+      const response = await client.license.mintLicenseTokens({
+        licensorIpId: modelIpId,
+        licenseTermsId,
+        receiver: userWalletAddress,
+        amount: 1,
+        maxMintingFee: parseEther("0.01"), // 등록된 mintingFee 이상으로 설정
+        maxRevenueShare: 100,
+        txOptions: { waitForTransaction: true },
+      });
+
+      console.log("✅ 라이선스 토큰 발급 성공:", response.licenseTokenIds);
+
+      // 여기서 이미지 생성 API 호출 등 트리거 가능
+      // await generateImageWithModel(modelIpId, userWalletAddress);
+
+      return response.licenseTokenIds;
+    } catch (error) {
+      console.error("❌ 라이선스 민팅 실패:", error);
+      throw error;
+    }
+  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
