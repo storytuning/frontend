@@ -251,13 +251,23 @@ const Dashboard: React.FC<DashboardProps> = ({ walletAddress }) => {
         .filter((ids): ids is string[] => ids !== undefined)
         .flat();
 
+      // 선택된 이미지가 없거나 필수 데이터가 부족한 경우 확인
+      if (selectedCids.length === 0) {
+        setNotification({
+          open: true,
+          message: "이미지를 하나 이상 선택해주세요",
+          severity: "error",
+        });
+        return;
+      }
+
       await axios.post(`${API_BASE_URL}/api/fine-tune-dataset`, {
         walletAddress,
         modelName: data.modelName,
-        description: data.description,
+        description: data.description || "",
         selectedCids,
-        selectedIpIds,
-        selectedLicenseTermsIds,
+        selectedIpIds: selectedIpIds.length > 0 ? selectedIpIds : ["default"],
+        selectedLicenseTermsIds: selectedLicenseTermsIds.length > 0 ? selectedLicenseTermsIds : ["default"],
       });
 
       setNotification({

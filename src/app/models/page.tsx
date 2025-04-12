@@ -25,7 +25,7 @@ import { useAccount } from "wagmi";
 import { useModelLoader, useAllModelsLoader } from "../../hooks/useModelLoader";
 import ImageGenerationModal from "../../components/ImageGenerationModal";
 import useImageGeneration from "../../hooks/useImageGeneration";
-import { toHex } from "viem";
+import { toHex, keccak256 } from "viem";
 import { useStoryClient } from "../../hooks/useStoryClient";
 import Image from "next/image";
 import { LicenseTerms } from "@story-protocol/core-sdk";
@@ -61,19 +61,19 @@ export default function ModelsPage() {
   const modelUsageLicenseTerms: LicenseTerms = {
     transferable: true,
     royaltyPolicy: "0xBe54FB168b3c982b7AaE60dB6CF75Bd8447b390E",
-    defaultMintingFee: 1n,
-    expiration: 0n,
+    defaultMintingFee: BigInt(1),
+    expiration: BigInt(0),
     commercialUse: true,
     commercialAttribution: true,
     commercializerChecker: zeroAddress,
     commercializerCheckerData: zeroAddress,
     commercialRevShare: 0,
-    commercialRevCeiling: 0n,
+    commercialRevCeiling: BigInt(0),
     derivativesAllowed: false,
     derivativesAttribution: false,
     derivativesApproval: false,
     derivativesReciprocal: false,
-    derivativeRevCeiling: 0n,
+    derivativeRevCeiling: BigInt(0),
     currency: "0x1514000000000000000000000000000000000000", // STORY token
     uri: "",
   };
@@ -86,22 +86,29 @@ export default function ModelsPage() {
     }
 
     try {
-      const metadataURI = `ipfs://${model.Cid}`;
+      const metadataURI = `ipfs://${model.cid}`;
       const licenseTermsId = "1";
+      
+      // 고정된 길이의 문자열 해시 생성 (32바이트 이내)
+      const createHashString = (input: string): `0x${string}` => {
+        // 입력 문자열을 단순하게 32바이트 이내로 만들기
+        return `0x${input.slice(0, 62).padEnd(62, '0')}` as `0x${string}`;
+      };
+      
       const response = await client.ipAsset.mintAndRegisterIpAndMakeDerivative({
         spgNftContract: "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc",
         derivData: {
-          parentIpIds: model.selectedIpIds,
-          licenseTermsIds: model.LicenseTermsIds,
+          parentIpIds: [],
+          licenseTermsIds: [],
           maxMintingFee: BigInt(0),
           maxRevenueShare: 0,
           maxRts: 0,
         },
         ipMetadata: {
           ipMetadataURI: metadataURI,
-          ipMetadataHash: toHex(`metadata-${model.Cid}`, { size: 32 }),
+          ipMetadataHash: createHashString(`metadata-${model.cid}`),
           nftMetadataURI: metadataURI,
-          nftMetadataHash: toHex(`nft-${model.Cid}`, { size: 32 }),
+          nftMetadataHash: createHashString(`nft-${model.cid}`),
         },
         recipient: walletAddress,
         txOptions: {
