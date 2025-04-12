@@ -18,14 +18,13 @@ import {
   Tabs,
   Snackbar,
   Alert,
-  useTheme,
   Tooltip,
 } from "@mui/material";
 import { useAccount } from "wagmi";
 import { useModelLoader, useAllModelsLoader } from "../../hooks/useModelLoader";
 import ImageGenerationModal from "../../components/ImageGenerationModal";
 import useImageGeneration from "../../hooks/useImageGeneration";
-import { toHex, keccak256 } from "viem";
+import { keccak256 } from "viem";
 import { useStoryClient } from "../../hooks/useStoryClient";
 import Image from "next/image";
 import { LicenseTerms } from "@story-protocol/core-sdk";
@@ -34,7 +33,6 @@ import { zeroAddress } from "viem";
 export default function ModelsPage() {
   const { client } = useStoryClient();
   const { address: walletAddress } = useAccount();
-  const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
   const [generationModalOpen, setGenerationModalOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<{
@@ -80,35 +78,33 @@ export default function ModelsPage() {
 
   // Model IP 등록
   const RegisterModelIP = async (model: any) => {
+    console.log("RegisterModelIP 호출됨:", model);
     if (!client || !walletAddress) {
       console.error("지갑이 연결되지 않았거나 클라이언트가 없습니다.");
       return;
     }
 
     try {
-      const metadataURI = `ipfs://${model.cid}`;
-      const licenseTermsId = "1";
-      
-      // 고정된 길이의 문자열 해시 생성 (32바이트 이내)
-      const createHashString = (input: string): `0x${string}` => {
-        // 입력 문자열을 단순하게 32바이트 이내로 만들기
-        return `0x${input.slice(0, 62).padEnd(62, '0')}` as `0x${string}`;
-      };
-      
+      const metadataURI = `ipfs://${model.Cid}`;
+
       const response = await client.ipAsset.mintAndRegisterIpAndMakeDerivative({
         spgNftContract: "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc",
         derivData: {
-          parentIpIds: [],
-          licenseTermsIds: [],
+          parentIpIds: model.selectedIpIds,
+          licenseTermsIds: model.selectedLicenseTermsIds,
           maxMintingFee: BigInt(0),
           maxRevenueShare: 0,
           maxRts: 0,
         },
         ipMetadata: {
           ipMetadataURI: metadataURI,
-          ipMetadataHash: createHashString(`metadata-${model.cid}`),
+          ipMetadataHash: keccak256(
+            new TextEncoder().encode(`metadata-${model.Cid}`)
+          ),
           nftMetadataURI: metadataURI,
-          nftMetadataHash: createHashString(`nft-${model.cid}`),
+          nftMetadataHash: keccak256(
+            new TextEncoder().encode(`nft-${model.Cid}`)
+          ),
         },
         recipient: walletAddress,
         txOptions: {
@@ -123,7 +119,9 @@ export default function ModelsPage() {
           licenseTermsData: [{ terms: modelUsageLicenseTerms }],
           txOptions: { waitForTransaction: true },
         });
-      } catch (error) {}
+      } catch (error) {
+        console.error("attach 에러 : ", error);
+      }
 
       setNotification({
         open: true,
@@ -138,26 +136,6 @@ export default function ModelsPage() {
           (error instanceof Error ? error.message : "Unknown error"),
         severity: "error",
       });
-    }
-  };
-
-  const handleTabChange = (_: React.SyntheticEvent, newValue: number) =>
-    setTabValue(newValue);
-  const handleCloseNotification = () =>
-    setNotification((prev) => ({ ...prev, open: false }));
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "success";
-      case "processing":
-        return "info";
-      case "pending":
-        return "warning";
-      case "failed":
-        return "error";
-      default:
-        return "default";
     }
   };
 

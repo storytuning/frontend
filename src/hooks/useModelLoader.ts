@@ -82,7 +82,7 @@ export const useAllModelsLoader = () => {
         "모든 모델 데이터:",
         JSON.stringify(response.data.data, null, 2)
       );
-      console.log("첫번째 모델 세부 정보:", response.data.data[0]);
+      console.log("첫번째 모델 세부 정보:", response.data.data[1]);
 
       // 중요 데이터가 있는지 확인
       // if (response.data.data.length > 0) {
