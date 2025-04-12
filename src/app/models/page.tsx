@@ -29,6 +29,7 @@ import { useStoryClient } from "../../hooks/useStoryClient";
 import Image from "next/image";
 import { LicenseTerms } from "@story-protocol/core-sdk";
 import { zeroAddress } from "viem";
+import axios from "axios";
 
 export default function ModelsPage() {
   const [licenseStatusMap, setLicenseStatusMap] = useState<
@@ -66,8 +67,9 @@ export default function ModelsPage() {
       const updatedStatus: Record<string, boolean> = {};
 
       for (const model of allModels) {
-        // IP별 체크하는 걸로 바꿔도 OK
-        const res = await axios.get(`/api/license-token/${walletAddress}`);
+        const res = await axios.get(
+          `http://localhost:3001/api/license-token/${walletAddress}`
+        );
         updatedStatus[model.modelName] = res.data?.hasToken;
       }
 
@@ -415,7 +417,7 @@ export default function ModelsPage() {
       const tokenIds =
         response.licenseTokenIds?.map((id) => id.toString()) || [];
       try {
-        await axios.post("/api/license-token", {
+        await axios.post("http://localhost:3001/api/license-token", {
           walletAddress,
           licenseTokenIds: tokenIds,
         });

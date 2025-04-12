@@ -28,7 +28,9 @@ export async function generateImage({
     return response.data;
   } catch (error: any) {
     console.error("이미지 생성 API 호출 실패:", error);
-    throw new Error(error.response?.data?.error || "이미지 생성에 실패했습니다");
+    throw new Error(
+      error.response?.data?.error || "이미지 생성에 실패했습니다"
+    );
   }
 }
 
@@ -43,4 +45,4 @@ export async function getGeneratedImages(walletAddress: string) {
     console.error("생성된 이미지 목록 조회 실패:", error);
     throw error;
   }
-} 
+}

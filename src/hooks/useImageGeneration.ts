@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import axios from 'axios';
+import { useState } from "react";
+import axios from "axios";
 
 interface GenerateImageParams {
   modelName: string;
@@ -36,10 +36,10 @@ export const useImageGeneration = () => {
     modelOwnerAddress,
     walletAddress,
     prompt,
-    numOfImages = 1
+    numOfImages = 1,
   }: GenerateImageParams): Promise<GeneratedImage[]> => {
     if (!walletAddress) {
-      throw new Error('지갑 연결이 필요합니다');
+      throw new Error("지갑 연결이 필요합니다");
     }
 
     try {
@@ -47,26 +47,27 @@ export const useImageGeneration = () => {
       setError(null);
 
       const response = await axios.post<GenerationResponse>(
-        'http://localhost:3001/api/generate-image',
+        "http://localhost:3001/api/generate-image",
         {
           modelName,
           modelOwnerAddress,
           walletAddress,
           prompt,
-          numOfImages
+          numOfImages,
         }
       );
 
       if (!response.data.success) {
-        throw new Error(response.data.message || '이미지 생성에 실패했습니다');
+        throw new Error(response.data.message || "이미지 생성에 실패했습니다");
       }
 
       return response.data.data.images;
     } catch (err) {
-      const errorMessage = err instanceof Error 
-        ? err.message 
-        : '이미지 생성 중 오류가 발생했습니다';
-      
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "이미지 생성 중 오류가 발생했습니다";
+
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -77,8 +78,8 @@ export const useImageGeneration = () => {
   return {
     generateImage,
     loading,
-    error
+    error,
   };
 };
 
-export default useImageGeneration; 
+export default useImageGeneration;

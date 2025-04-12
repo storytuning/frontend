@@ -1,25 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Button,
-  Typography,
-  Menu,
-  MenuItem,
-} from "@mui/material";
+import { Button, Typography, Menu, MenuItem } from "@mui/material";
 import { AccountBalanceWallet as WalletIcon } from "@mui/icons-material";
-import {
-  useAccount,
-  useConnect,
-  useDisconnect,
-} from "wagmi";
-<<<<<<< HEAD
-import { readContract, writeContract } from "@wagmi/core";
-import { wagmiConfig } from "@/config/wagmiConfig";
-
-import { NFT_CONTRACT_, NFT_CONTRACT_ADDRESS } from "../utils/contractConfig";
-=======
->>>>>>> 6fe52149eda4964bc4378894dfe467fd230b1a64
+import { useAccount, useConnect, useDisconnect } from "wagmi";
 
 interface WalletManagerProps {
   onWalletConnected: (address: string) => void;
