@@ -78,18 +78,21 @@ export const useAllModelsLoader = () => {
         `http://localhost:3001/api/models`
       );
 
-      console.log("모든 모델 데이터:", JSON.stringify(response.data.data, null, 2));
+      console.log(
+        "모든 모델 데이터:",
+        JSON.stringify(response.data.data, null, 2)
+      );
       console.log("첫번째 모델 세부 정보:", response.data.data[0]);
 
       // 중요 데이터가 있는지 확인
-      if (response.data.data.length > 0) {
-        const firstModel = response.data.data[0];
-        console.log("모델 ID:", firstModel.modelName);
-        console.log("모델 상태:", firstModel.status);
-        console.log("modelIpfsHash:", firstModel.modelIpfsHash);
-        console.log("selectedIpIds:", firstModel.selectedIpIds);
-        console.log("selectedCids:", firstModel.selectedCids);
-      }
+      // if (response.data.data.length > 0) {
+      //   const firstModel = response.data.data[0];
+      //   console.log("모델 ID:", firstModel.modelName);
+      //   console.log("모델 상태:", firstModel.status);
+      //   console.log("modelIpfsHash:", firstModel.modelIpfsHash);
+      //   console.log("selectedIpIds:", firstModel.selectedIpIds);
+      //   console.log("selectedCids:", firstModel.selectedCids);
+      // }
 
       setModels(response.data.data);
     } catch (error) {

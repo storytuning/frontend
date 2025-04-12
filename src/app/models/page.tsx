@@ -28,6 +28,8 @@ import useImageGeneration from "../../hooks/useImageGeneration";
 import { toHex } from "viem";
 import { useStoryClient } from "../../hooks/useStoryClient";
 import Image from "next/image";
+import { LicenseTerms } from "@story-protocol/core-sdk";
+import { zeroAddress } from "viem";
 
 export default function ModelsPage() {
   const { client } = useStoryClient();
@@ -56,6 +58,26 @@ export default function ModelsPage() {
     error: allError,
   } = useAllModelsLoader();
 
+  const modelUsageLicenseTerms: LicenseTerms = {
+    transferable: true,
+    royaltyPolicy: "0xBe54FB168b3c982b7AaE60dB6CF75Bd8447b390E",
+    defaultMintingFee: 1n,
+    expiration: 0n,
+    commercialUse: true,
+    commercialAttribution: true,
+    commercializerChecker: zeroAddress,
+    commercializerCheckerData: zeroAddress,
+    commercialRevShare: 0,
+    commercialRevCeiling: 0n,
+    derivativesAllowed: false,
+    derivativesAttribution: false,
+    derivativesApproval: false,
+    derivativesReciprocal: false,
+    derivativeRevCeiling: 0n,
+    currency: "0x1514000000000000000000000000000000000000", // STORY token
+    uri: "",
+  };
+
   // Model IP 등록
   const RegisterModelIP = async (model: any) => {
     if (!client || !walletAddress) {
@@ -70,7 +92,7 @@ export default function ModelsPage() {
         spgNftContract: "0xc32A8a0FF3beDDDa58393d022aF433e78739FAbc",
         derivData: {
           parentIpIds: model.selectedIpIds,
-          licenseTermsIds: [licenseTermsId],
+          licenseTermsIds: model.LicenseTermsIds,
           maxMintingFee: BigInt(0),
           maxRevenueShare: 0,
           maxRts: 0,
@@ -88,18 +110,20 @@ export default function ModelsPage() {
         },
       });
 
-      console.log("register success:", {
-        ipId: response.ipId,
-        tokenId: response.tokenId,
-        txHash: response.txHash,
-      });
+      try {
+        await client.ipAsset.registerPilTermsAndAttach({
+          ipId: response.ipId,
+          licenseTermsData: [{ terms: modelUsageLicenseTerms }],
+          txOptions: { waitForTransaction: true },
+        });
+      } catch (error) {}
+
       setNotification({
         open: true,
         message: `model successfully registered. IP ID: ${response.ipId}`,
         severity: "success",
       });
     } catch (error) {
-      console.error("failed:", error);
       setNotification({
         open: true,
         message:
@@ -109,10 +133,6 @@ export default function ModelsPage() {
       });
     }
   };
-
-  // Model license attach
-  //const handleLicenseAttach = async ();
-  //registerPilTermsAndAttach
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) =>
     setTabValue(newValue);

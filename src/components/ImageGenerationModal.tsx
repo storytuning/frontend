@@ -144,7 +144,9 @@ const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
           />
 
           <Box sx={{ mb: 3 }}>
-            <Typography gutterBottom>Number of images: {numOfImages}</Typography>
+            <Typography gutterBottom>
+              Number of images: {numOfImages}
+            </Typography>
             <Slider
               value={numOfImages}
               onChange={(_, value) => setNumOfImages(value as number)}
@@ -183,7 +185,7 @@ const ImageGenerationModal: React.FC<ImageGenerationModalProps> = ({
               </Typography>
               <Grid container spacing={2}>
                 {generatedImages.map((image, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={index}>
+                  <Grid size={{ xs: 12, sm: 6, md: 4 }} key={index}>
                     <Card sx={{ borderRadius: 2 }}>
                       <CardMedia
                         component="img"
