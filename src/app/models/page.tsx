@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
@@ -24,13 +24,17 @@ import { useAccount } from "wagmi";
 import { useModelLoader, useAllModelsLoader } from "../../hooks/useModelLoader";
 import ImageGenerationModal from "../../components/ImageGenerationModal";
 import useImageGeneration from "../../hooks/useImageGeneration";
-import { keccak256 } from "viem";
+import { Address, keccak256 } from "viem";
 import { useStoryClient } from "../../hooks/useStoryClient";
 import Image from "next/image";
 import { LicenseTerms } from "@story-protocol/core-sdk";
 import { zeroAddress } from "viem";
 
 export default function ModelsPage() {
+  const [licenseStatusMap, setLicenseStatusMap] = useState<
+    Record<string, boolean>
+  >({});
+
   const { client } = useStoryClient();
   const { address: walletAddress } = useAccount();
   const [tabValue, setTabValue] = useState(0);
@@ -55,6 +59,23 @@ export default function ModelsPage() {
     loading: allLoading,
     error: allError,
   } = useAllModelsLoader();
+  useEffect(() => {
+    const fetchTokenStatuses = async () => {
+      if (!walletAddress || !allModels.length) return;
+
+      const updatedStatus: Record<string, boolean> = {};
+
+      for (const model of allModels) {
+        // IP별 체크하는 걸로 바꿔도 OK
+        const res = await axios.get(`/api/license-token/${walletAddress}`);
+        updatedStatus[model.modelName] = res.data?.hasToken;
+      }
+
+      setLicenseStatusMap(updatedStatus);
+    };
+
+    fetchTokenStatuses();
+  }, [walletAddress, allModels]);
 
   const modelUsageLicenseTerms: LicenseTerms = {
     transferable: true,
@@ -179,147 +200,166 @@ export default function ModelsPage() {
     });
   };
 
-  const renderModelCard = (model: any, showCreator = false) => (
-    <Card sx={{ height: "100%", borderRadius: 3 }}>
-      <CardHeader
-        title={
-          <Typography variant="h6" component="div">
-            {model.modelName}
-          </Typography>
-        }
-        subheader={
-          <Box sx={{ mt: 1 }}>
-            <Chip
-              label={getStatusText(model.status)}
-              size="small"
-              color={model.status === "completed" ? "success" : "default"}
-              sx={{ mr: 1 }}
-            />
-            {showCreator && (
-              <Tooltip title={model.walletAddress}>
-                <Chip
-                  label={`Creator: ${shortenAddress(model.walletAddress)}`}
-                  size="small"
-                  sx={{ mr: 1 }}
-                />
-              </Tooltip>
-            )}
-          </Box>
-        }
-      />
-      <CardContent>
-        <Typography variant="body2" color="text.secondary" gutterBottom>
-          {model.description || "No description provided"}
-        </Typography>
-
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          display="block"
-          sx={{ mt: 1 }}
-        >
-          Created: {formatDate(model.createdAt)}
-        </Typography>
-
-        {/* selectedIpIds 표시 - IP 링크와 아이콘 추가 */}
-        {model.selectedIpIds && model.selectedIpIds.length > 0 && (
-          <Box sx={{ mt: 1, mb: 1 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Selected IP IDs:
+  const renderModelCard = (model: any, showCreator = false) => {
+    const hasToken = licenseStatusMap[model.modelName] === true;
+    return (
+      <Card sx={{ height: "100%", borderRadius: 3 }}>
+        <CardHeader
+          title={
+            <Typography variant="h6" component="div">
+              {model.modelName}
             </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-              {model.selectedIpIds.map((ipId: string, index: number) => (
-                <Chip
-                  key={index}
-                  icon={
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", mr: -0.5 }}
-                    >
-                      <Image
-                        src="/ip_token.svg"
-                        alt="IP Token"
-                        width={16}
-                        height={16}
-                      />
-                    </Box>
-                  }
-                  label={`${ipId.substring(0, 6)}...${ipId.substring(
-                    ipId.length - 4
-                  )}`}
-                  size="small"
-                  variant="outlined"
-                  color="info"
-                  clickable
-                  onClick={() => {
-                    window.open(
-                      `https://aeneid.explorer.story.foundation/ipa/${ipId}`,
-                      "_blank"
-                    );
-                  }}
-                  sx={{
-                    background:
-                      "linear-gradient(135deg, rgba(123, 97, 255, 0.1), rgba(0, 188, 212, 0.1))",
-                    borderColor: "rgba(123, 97, 255, 0.4)",
-                    color: "#7b61ff",
-                    fontWeight: 500,
-                    "&:hover": {
-                      background:
-                        "linear-gradient(135deg, rgba(123, 97, 255, 0.2), rgba(0, 188, 212, 0.2))",
-                    },
-                    "& .MuiChip-deleteIcon": {
-                      color: "rgba(123, 97, 255, 0.7)",
-                    },
-                  }}
-                />
-              ))}
-            </Box>
-          </Box>
-        )}
-
-        {model.status === "failed" && (
-          <Typography color="error" variant="body2" sx={{ mt: 1 }}>
-            Error: {model.error || "Unknown error occurred"}
-          </Typography>
-        )}
-      </CardContent>
-      <CardActions>
-        <Button
-          fullWidth
-          size="small"
-          variant="contained"
-          disabled={model.status !== "completed"}
-          onClick={() =>
-            model.status === "completed" &&
-            handleOpenGenerationModal(model.modelName, model.walletAddress)
           }
-          sx={{
-            background:
-              model.status === "completed"
-                ? "linear-gradient(135deg, #ff4081, #7b61ff)"
-                : undefined,
-          }}
-        >
-          {model.status === "completed" ? "Use Model" : "Training..."}
-        </Button>
-        <Button
-          fullWidth
-          size="small"
-          variant="contained"
-          disabled={model.status !== "completed"}
-          onClick={() => model.status === "completed" && RegisterModelIP(model)}
-          sx={{
-            background:
-              model.status === "completed"
-                ? "linear-gradient(135deg, #7b61ff, #ff4081)"
-                : undefined,
-          }}
-        >
-          Register IP
-        </Button>
-      </CardActions>
-    </Card>
-  );
+          subheader={
+            <Box sx={{ mt: 1 }}>
+              <Chip
+                label={getStatusText(model.status)}
+                size="small"
+                color={model.status === "completed" ? "success" : "default"}
+                sx={{ mr: 1 }}
+              />
+              {showCreator && (
+                <Tooltip title={model.walletAddress}>
+                  <Chip
+                    label={`Creator: ${shortenAddress(model.walletAddress)}`}
+                    size="small"
+                    sx={{ mr: 1 }}
+                  />
+                </Tooltip>
+              )}
+            </Box>
+          }
+        />
+        <CardContent>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            {model.description || "No description provided"}
+          </Typography>
 
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            display="block"
+            sx={{ mt: 1 }}
+          >
+            Created: {formatDate(model.createdAt)}
+          </Typography>
+
+          {/* selectedIpIds 표시 - IP 링크와 아이콘 추가 */}
+          {model.selectedIpIds && model.selectedIpIds.length > 0 && (
+            <Box sx={{ mt: 1, mb: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Selected IP IDs:
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                {model.selectedIpIds.map((ipId: string, index: number) => (
+                  <Chip
+                    key={index}
+                    icon={
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", mr: -0.5 }}
+                      >
+                        <Image
+                          src="/ip_token.svg"
+                          alt="IP Token"
+                          width={16}
+                          height={16}
+                        />
+                      </Box>
+                    }
+                    label={`${ipId.substring(0, 6)}...${ipId.substring(
+                      ipId.length - 4
+                    )}`}
+                    size="small"
+                    variant="outlined"
+                    color="info"
+                    clickable
+                    onClick={() => {
+                      window.open(
+                        `https://aeneid.explorer.story.foundation/ipa/${ipId}`,
+                        "_blank"
+                      );
+                    }}
+                    sx={{
+                      background:
+                        "linear-gradient(135deg, rgba(123, 97, 255, 0.1), rgba(0, 188, 212, 0.1))",
+                      borderColor: "rgba(123, 97, 255, 0.4)",
+                      color: "#7b61ff",
+                      fontWeight: 500,
+                      "&:hover": {
+                        background:
+                          "linear-gradient(135deg, rgba(123, 97, 255, 0.2), rgba(0, 188, 212, 0.2))",
+                      },
+                      "& .MuiChip-deleteIcon": {
+                        color: "rgba(123, 97, 255, 0.7)",
+                      },
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          )}
+
+          {model.status === "failed" && (
+            <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+              Error: {model.error || "Unknown error occurred"}
+            </Typography>
+          )}
+        </CardContent>
+        <CardActions>
+          <Button
+            fullWidth
+            size="small"
+            variant="contained"
+            disabled={model.status !== "completed"}
+            onClick={() => {
+              if (model.status !== "completed") return;
+
+              if (hasToken) {
+                //hasLicenseToken
+                handleOpenGenerationModal(model.modelName, model.walletAddress);
+              } else {
+                handleBuyModelLicense({
+                  modelIpId: model.ipId,
+                  licenseTermsId: model.licenseTermsId,
+                  userWalletAddress: walletAddress as Address,
+                });
+              }
+            }}
+            sx={{
+              background:
+                model.status === "completed"
+                  ? "linear-gradient(135deg, #ff4081, #7b61ff)"
+                  : undefined,
+            }}
+          >
+            {model.status !== "completed"
+              ? "Training..."
+              : hasToken
+              ? "Use Model"
+              : "Buy Model"}
+          </Button>
+
+          <Button
+            fullWidth
+            size="small"
+            variant="contained"
+            disabled={model.status !== "completed"}
+            onClick={() =>
+              model.status === "completed" && RegisterModelIP(model)
+            }
+            sx={{
+              background:
+                model.status === "completed"
+                  ? "linear-gradient(135deg, #7b61ff, #ff4081)"
+                  : undefined,
+            }}
+          >
+            Register IP
+          </Button>
+        </CardActions>
+      </Card>
+    );
+  };
   const renderLoading = () => (
     <Grid container spacing={3}>
       {[1, 2, 3].map((_, i) => (
@@ -346,14 +386,14 @@ export default function ModelsPage() {
     </Grid>
   );
 
-  const useModel = async ({
+  const handleBuyModelLicense = async ({
     modelIpId,
     licenseTermsId,
     userWalletAddress,
   }: {
     modelIpId: string;
     licenseTermsId: string | number | bigint;
-    userWalletAddress: string;
+    userWalletAddress: Address;
   }) => {
     if (!client || !userWalletAddress) {
       console.error("지갑 연결이 필요합니다.");
@@ -362,23 +402,29 @@ export default function ModelsPage() {
 
     try {
       const response = await client.license.mintLicenseTokens({
-        licensorIpId: modelIpId,
+        licensorIpId: modelIpId as `0x${string}`,
         licenseTermsId,
         receiver: userWalletAddress,
         amount: 1,
-        maxMintingFee: parseEther("0.01"), // 등록된 mintingFee 이상으로 설정
+        maxMintingFee: BigInt(1),
         maxRevenueShare: 100,
         txOptions: { waitForTransaction: true },
       });
 
-      console.log("✅ 라이선스 토큰 발급 성공:", response.licenseTokenIds);
-
-      // 여기서 이미지 생성 API 호출 등 트리거 가능
-      // await generateImageWithModel(modelIpId, userWalletAddress);
-
-      return response.licenseTokenIds;
+      console.log("라이선스 토큰 발급 성공:", response.licenseTokenIds);
+      const tokenIds =
+        response.licenseTokenIds?.map((id) => id.toString()) || [];
+      try {
+        await axios.post("/api/license-token", {
+          walletAddress,
+          licenseTokenIds: tokenIds,
+        });
+      } catch (error) {
+        console.error("구매토큰 post 실패 :", error);
+        throw error;
+      }
     } catch (error) {
-      console.error("❌ 라이선스 민팅 실패:", error);
+      console.error("라이선스 민팅 실패:", error);
       throw error;
     }
   };
