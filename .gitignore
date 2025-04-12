@@ -1,0 +1,71 @@
+# Dependencies
+node_modules/
+/.pnp
+.pnp.js
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Build outputs
+/build
+/dist
+/out
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# TypeScript
+*.tsbuildinfo
+
+# Testing
+/coverage
+
+# Prisma
+/prisma/*.db
+/prisma/migrations/
+
+# IPFS
+.ipfs/
+
+# Production
+/frontend/build
+/frontend/.env
+/frontend/node_modules
+
+# Backend
+/backend/dist
+/backend/node_modules
+/backend/.env
+/backend/firebase-service-account.json
+
+# Firebase
+firebase-service-account.json
+
+# Misc
+.DS_Store
+*.pem
+*.log
+logs
+*.pid
+*.seed
+*.pid.lock
+
+# Cache
+.npm
+.eslintcache
+.next
+.vercel
+.cache
