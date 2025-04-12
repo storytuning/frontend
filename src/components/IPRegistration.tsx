@@ -59,7 +59,7 @@ const IPRegistration: React.FC<IPRegistrationProps> = ({
         commercialRevShare: 0,
         commercialRevCeiling: 0n,
         derivativesAllowed: true,
-        derivativesAttribution: true,
+        derivativesAttribution: false, //derivative IP can use new license
         derivativesApproval: false,
         derivativesReciprocal: true,
         derivativeRevCeiling: 0n,

@@ -64,7 +64,6 @@ export default function ModelsPage() {
     }
 
     try {
-      // model.Cid 사용 (model.modelIpfsHash 대신)
       const metadataURI = `ipfs://${model.Cid}`;
       const licenseTermsId = "1";
       const response = await client.ipAsset.mintAndRegisterIpAndMakeDerivative({
@@ -73,8 +72,8 @@ export default function ModelsPage() {
           parentIpIds: model.selectedIpIds,
           licenseTermsIds: [licenseTermsId],
           maxMintingFee: BigInt(0),
-          maxRevenueShare: 100,
-          maxRts: 100_000_000,
+          maxRevenueShare: 0,
+          maxRts: 0,
         },
         ipMetadata: {
           ipMetadataURI: metadataURI,
@@ -89,27 +88,31 @@ export default function ModelsPage() {
         },
       });
 
-      console.log("✅ 등록 성공:", {
+      console.log("register success:", {
         ipId: response.ipId,
         tokenId: response.tokenId,
         txHash: response.txHash,
       });
       setNotification({
         open: true,
-        message: `모델이 성공적으로 IP로 등록되었습니다! IP ID: ${response.ipId}`,
+        message: `model successfully registered. IP ID: ${response.ipId}`,
         severity: "success",
       });
     } catch (error) {
-      console.error("❌ 파생 IP 등록 실패:", error);
+      console.error("failed:", error);
       setNotification({
         open: true,
         message:
-          "등록 실패: " +
+          "registeration failed. Error: " +
           (error instanceof Error ? error.message : "Unknown error"),
         severity: "error",
       });
     }
   };
+
+  // Model license attach
+  //const handleLicenseAttach = async ();
+  //registerPilTermsAndAttach
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) =>
     setTabValue(newValue);
@@ -235,32 +238,41 @@ export default function ModelsPage() {
         <Typography variant="body2" color="text.secondary" gutterBottom>
           {model.description || "No description provided"}
         </Typography>
-        
-        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          display="block"
+          sx={{ mt: 1 }}
+        >
           Created: {formatDate(model.createdAt)}
         </Typography>
-        
+
         {/* selectedIpIds 표시 - IP 링크와 아이콘 추가 */}
         {model.selectedIpIds && model.selectedIpIds.length > 0 && (
           <Box sx={{ mt: 1, mb: 1 }}>
             <Typography variant="subtitle2" gutterBottom>
               Selected IP IDs:
             </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
               {model.selectedIpIds.map((ipId: string, index: number) => (
                 <Chip
                   key={index}
                   icon={
-                    <Box sx={{ display: 'flex', alignItems: 'center', mr: -0.5 }}>
-                      <Image 
-                        src="/ip_token.svg" 
-                        alt="IP Token" 
-                        width={16} 
+                    <Box
+                      sx={{ display: "flex", alignItems: "center", mr: -0.5 }}
+                    >
+                      <Image
+                        src="/ip_token.svg"
+                        alt="IP Token"
+                        width={16}
                         height={16}
                       />
                     </Box>
                   }
-                  label={`${ipId.substring(0, 6)}...${ipId.substring(ipId.length - 4)}`}
+                  label={`${ipId.substring(0, 6)}...${ipId.substring(
+                    ipId.length - 4
+                  )}`}
                   size="small"
                   variant="outlined"
                   color="info"
@@ -272,12 +284,14 @@ export default function ModelsPage() {
                     );
                   }}
                   sx={{
-                    background: "linear-gradient(135deg, rgba(123, 97, 255, 0.1), rgba(0, 188, 212, 0.1))",
+                    background:
+                      "linear-gradient(135deg, rgba(123, 97, 255, 0.1), rgba(0, 188, 212, 0.1))",
                     borderColor: "rgba(123, 97, 255, 0.4)",
                     color: "#7b61ff",
                     fontWeight: 500,
                     "&:hover": {
-                      background: "linear-gradient(135deg, rgba(123, 97, 255, 0.2), rgba(0, 188, 212, 0.2))",
+                      background:
+                        "linear-gradient(135deg, rgba(123, 97, 255, 0.2), rgba(0, 188, 212, 0.2))",
                     },
                     "& .MuiChip-deleteIcon": {
                       color: "rgba(123, 97, 255, 0.7)",
@@ -288,7 +302,7 @@ export default function ModelsPage() {
             </Box>
           </Box>
         )}
-        
+
         {model.status === "failed" && (
           <Typography color="error" variant="body2" sx={{ mt: 1 }}>
             Error: {model.error || "Unknown error occurred"}
@@ -319,9 +333,7 @@ export default function ModelsPage() {
           size="small"
           variant="contained"
           disabled={model.status !== "completed"}
-          onClick={() =>
-            model.status === "completed" && RegisterModelIP(model)
-          }
+          onClick={() => model.status === "completed" && RegisterModelIP(model)}
           sx={{
             background:
               model.status === "completed"
