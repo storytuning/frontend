@@ -19,6 +19,7 @@ import {
   Snackbar,
   Alert,
   Tooltip,
+  CircularProgress,
 } from "@mui/material";
 import { useAccount } from "wagmi";
 import { useModelLoader, useAllModelsLoader } from "../../hooks/useModelLoader";
@@ -77,14 +78,27 @@ export default function ModelsPage() {
   };
 
   // Model IP 등록
+  const [isRegistering, setIsRegistering] = useState<{ [key: string]: boolean }>({});
+  const [registeredModels, setRegisteredModels] = useState<Set<string>>(new Set());
+
   const RegisterModelIP = async (model: any) => {
-    console.log("RegisterModelIP 호출됨:", model);
+    console.log("RegisterModelIP called with model:", model);
+    console.log("Client state:", client);
+    console.log("Address state:", walletAddress);
+    
     if (!client || !walletAddress) {
-      console.error("지갑이 연결되지 않았거나 클라이언트가 없습니다.");
+      console.error("Client or address is not connected");
+      setNotification({
+        open: true,
+        message: "지갑이 연결되지 않았습니다. 지갑을 연결해주세요.",
+        severity: "error",
+      });
       return;
     }
 
+    setIsRegistering(prev => ({ ...prev, [model.modelName]: true }));
     try {
+      console.log("Starting IP registration process...");
       const metadataURI = `ipfs://${model.Cid}`;
 
       const response = await client.ipAsset.mintAndRegisterIpAndMakeDerivative({
@@ -113,29 +127,33 @@ export default function ModelsPage() {
         },
       });
 
-      try {
-        await client.ipAsset.registerPilTermsAndAttach({
-          ipId: response.ipId,
-          licenseTermsData: [{ terms: modelUsageLicenseTerms }],
-          txOptions: { waitForTransaction: true },
-        });
-      } catch (error) {
-        console.error("attach 에러 : ", error);
-      }
+      console.log("IP registration response:", response);
 
-      setNotification({
-        open: true,
-        message: `model successfully registered. IP ID: ${response.ipId}`,
-        severity: "success",
-      });
+      if (response && response.ipId) {
+        console.log("Successfully registered IP with ID:", response.ipId);
+        setRegisteredModels(prev => new Set([...prev, model.modelName]));
+        setNotification({
+          open: true,
+          message: `모델이 성공적으로 IP로 등록되었습니다! IP ID: ${response.ipId}`,
+          severity: "success",
+        });
+      } else {
+        console.error("Invalid response from IP registration:", response);
+        setNotification({
+          open: true,
+          message: "IP 등록에 실패했습니다. 응답이 올바르지 않습니다.",
+          severity: "error",
+        });
+      }
     } catch (error) {
+      console.error("Error during IP registration:", error);
       setNotification({
         open: true,
-        message:
-          "registeration failed. Error: " +
-          (error instanceof Error ? error.message : "Unknown error"),
+        message: `IP 등록 중 오류가 발생했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
         severity: "error",
       });
+    } finally {
+      setIsRegistering(prev => ({ ...prev, [model.modelName]: false }));
     }
   };
 
@@ -333,21 +351,24 @@ export default function ModelsPage() {
         >
           {model.status === "completed" ? "Use Model" : "Training..."}
         </Button>
-        <Button
-          fullWidth
-          size="small"
-          variant="contained"
-          disabled={model.status !== "completed"}
-          onClick={() => model.status === "completed" && RegisterModelIP(model)}
-          sx={{
-            background:
-              model.status === "completed"
-                ? "linear-gradient(135deg, #7b61ff, #ff4081)"
-                : undefined,
-          }}
-        >
-          Register IP
-        </Button>
+        {!registeredModels.has(model.modelName) && (
+          <Button
+            fullWidth
+            size="small"
+            variant="contained"
+            disabled={model.status !== "completed" || isRegistering[model.modelName]}
+            onClick={() => model.status === "completed" && RegisterModelIP(model)}
+            startIcon={isRegistering[model.modelName] ? <CircularProgress size={20} /> : null}
+            sx={{
+              background:
+                model.status === "completed"
+                  ? "linear-gradient(135deg, #7b61ff, #ff4081)"
+                  : undefined,
+            }}
+          >
+            {isRegistering[model.modelName] ? "Registering..." : "Register IP"}
+          </Button>
+        )}
       </CardActions>
     </Card>
   );
